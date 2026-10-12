@@ -1,0 +1,284 @@
+{
+  "docs_paths": {
+    "zhCn": [
+      {
+        "type": "md",
+        "name": "index.md",
+        "title": "主页"
+      },
+      {
+        "type": "folder",
+        "name": "contents/getting-started",
+        "title": "快速开始",
+        "children": [
+          {
+            "type": "md",
+            "name": "quick-start.md",
+            "title": "概览"
+          },
+          {
+            "type": "md",
+            "name": "quick-start/cpp.md",
+            "title": "C++"
+          },
+          {
+            "type": "md",
+            "name": "quick-start/python.md",
+            "title": "Python"
+          },
+          {
+            "type": "md",
+            "name": "quick-start/ros2.md",
+            "title": "ROS"
+          }
+        ]
+      },
+      {
+        "type": "folder",
+        "name": "contents/concepts",
+        "title": "基本概念",
+        "children": [
+          {
+            "type": "md",
+            "name": "hybrid_deploy.md",
+            "title": "混合部署"
+          },
+          {
+            "type": "md",
+            "name": "transform.md",
+            "title": "TF坐标变换"
+          }
+        ]
+      },
+      {
+        "type": "folder",
+        "name": "contents/howto",
+        "title": "如何使用",
+        "children": [
+          {
+            "type": "md",
+            "name": "deploy.md",
+            "title": "部署"
+          },
+          {
+            "type": "md",
+            "name": "ptp.md",
+            "title": "时间同步"
+          },
+          {
+            "type": "md",
+            "name": "cpp.md",
+            "title": "C++"
+          },
+          {
+            "type": "md",
+            "name": "python.md",
+            "title": "python使用"
+          },
+          {
+            "type": "md",
+            "name": "ros2.md",
+            "title": "ROS2使用"
+          }
+        ]
+      },
+      {
+        "type": "folder",
+        "name": "contents/tools",
+        "title": "工具",
+        "children": [
+          {
+            "type": "md",
+            "name": "mc_example.md",
+            "title": "关节控制工具"
+          },
+          {
+            "type": "md",
+            "name": "camera_web_viewer.md",
+            "title": "Web相机查看器"
+          }
+        ]
+      },
+      {
+        "type": "folder",
+        "name": "contents/reference",
+        "title": "接口文档",
+        "children": [
+          {
+            "type": "folder",
+            "name": "Python",
+            "title": "Python",
+            "children": [
+              {
+                "type": "md",
+                "name": "common.md",
+                "title": "Common"
+              },
+              {
+                "type": "md",
+                "name": "types.md",
+                "title": "Types"
+              },
+              {
+                "type": "md",
+                "name": "tf.md",
+                "title": "TF"
+              },
+              {
+                "type": "md",
+                "name": "robot.md",
+                "title": "Robot"
+              },
+              {
+                "type": "md",
+                "name": "imu.md",
+                "title": "IMU"
+              },
+              {
+                "type": "md",
+                "name": "camera.md",
+                "title": "Camera"
+              },
+              {
+                "type": "md",
+                "name": "lidar.md",
+                "title": "Lidar"
+              },
+              {
+                "type": "md",
+                "name": "pnc.md",
+                "title": "PNC"
+              },
+              {
+                "type": "md",
+                "name": "slam.md",
+                "title": "SLAM"
+              },
+              {
+                "type": "md",
+                "name": "map.md",
+                "title": "Map"
+              },
+              {
+                "type": "md",
+                "name": "interaction.md",
+                "title": "Interaction"
+              },
+              {
+                "type": "md",
+                "name": "uss.md",
+                "title": "UltrasonicRadar"
+              }
+            ]
+          },
+          {
+            "type": "folder",
+            "name": "cpp",
+            "title": "C++",
+            "children": [
+              {
+                "type": "md",
+                "name": "common.md",
+                "title": "Common"
+              },
+              {
+                "type": "md",
+                "name": "imu.md",
+                "title": "IMU"
+              },
+              {
+                "type": "md",
+                "name": "camera.md",
+                "title": "Camera"
+              },
+              {
+                "type": "md",
+                "name": "lidar.md",
+                "title": "Lidar"
+              },
+              {
+                "type": "md",
+                "name": "tf.md",
+                "title": "TF"
+              },
+              {
+                "type": "md",
+                "name": "robot.md",
+                "title": "Robot"
+              },
+              {
+                "type": "md",
+                "name": "pnc.md",
+                "title": "PNC"
+              },
+              {
+                "type": "md",
+                "name": "slam.md",
+                "title": "SLAM"
+              },
+              {
+                "type": "md",
+                "name": "map.md",
+                "title": "Map"
+              },
+              {
+                "type": "md",
+                "name": "interaction.md",
+                "title": "Interaction"
+              },
+              {
+                "type": "md",
+                "name": "uss.md",
+                "title": "UltrasonicRadar"
+              }
+            ]
+          },
+          {
+            "type": "folder",
+            "name": "ROS2",
+            "title": "ROS2",
+            "children": [
+              {
+                "type": "md",
+                "name": "imu_node.md",
+                "title": "IMU"
+              },
+              {
+                "type": "md",
+                "name": "camera_node.md",
+                "title": "Camera"
+              },
+              {
+                "type": "md",
+                "name": "camera_compress_node.md",
+                "title": "Camera Compress"
+              },
+              {
+                "type": "md",
+                "name": "lidar_node.md",
+                "title": "Lidar"
+              },
+              {
+                "type": "md",
+                "name": "control_node.md",
+                "title": "Control"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "folder",
+        "name": "contents/appendices",
+        "title": "附录",
+        "children": [
+          {
+            "type": "md",
+            "name": "joint_error_code.md",
+            "title": "关节错误码"
+          }
+        ]
+      }
+    ]
+  }
+}
