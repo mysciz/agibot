@@ -19,8 +19,14 @@ ARGS=(
   --max-joint-step "${MAX_JOINT_STEP}"
   --max-gripper-step "${MAX_GRIPPER_STEP}"
 )
+if [ -n "${INFER_DELAY:-}" ]; then
+  ARGS+=(--infer-delay "${INFER_DELAY}")
+fi
 if [ "${ACTION_SOURCE}" = "file" ]; then
   ARGS+=(--actions "${ACTIONS_FILE}")
+fi
+if [ -n "${SAVE_DIR:-}" ]; then
+  ARGS+=(--save-dir "${SAVE_DIR}")
 fi
 
 echo "=== 端口 A  model:${MODEL_PORT}  source=${ACTION_SOURCE}  mode=${MODE_KEY}  python=${PYTHON} ==="

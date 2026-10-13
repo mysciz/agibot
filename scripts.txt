@@ -7,10 +7,7 @@ cd /home/zhouzhenliang/agibot/agibot
 
 # 连机器人的终端先执行。serve 不连机器人，可以不设。
 # 若提示 python 未找到，先 conda activate base。
-export LOCATOR_IP=10.42.1.102
-export AORTA_DISCOVERY_URI=http://10.42.1.101:2379
-export AORTA_DISPATCHER_THREAD_NUM=6
-
+cccc
 
 # =============================================================================
 # 1. 直接控制手腕（不经过 serve / client）
@@ -70,3 +67,49 @@ NO_CAMERA=1 bash deploy/client.sh
 
 # 回到终端 A，在 Δθ> 后面贴一行。例如左臂第 1 关节 +0.05 rad：
 # 0.05 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+
+
+# =============================================================================
+# 4. 今晚：异步 + 存相机
+# 终端 B 先贴最上面的三个 export。不要加 NO_CAMERA=1。
+# 换下一条之前，Ctrl+C 停掉 A。
+# =============================================================================
+
+# --- 4.1 先只存相机，手臂不动。图在 deploy/records/check/0001/ ---
+# 终端 A
+SAVE_DIR=deploy/records/check MODE=async ACTIONS_FILE=deploy/examples/joint0_wiggle.json bash deploy/serve.sh
+
+# 终端 B
+MODE=async MAX_STEPS=4 NO_MOVE=1 bash deploy/client.sh
+
+
+# --- 4.2 异步摆臂约 10 秒。肩从起点摆到约 11.5° 再回来，共 5 次。图在 deploy/records/swing/ ---
+# 终端 A
+SAVE_DIR=deploy/records/swing MODE=async ACTIONS_FILE=deploy/examples/arm_swing_10s.json bash deploy/serve.sh
+
+# 终端 B
+MODE=async MAX_STEPS=20 bash deploy/client.sh
+
+
+# =============================================================================
+# 5. 采集轨迹回放（aligned_joints.json）
+# 622 步相邻帧 Δθ。一次发 30 步，推理延迟 0.5s。
+# 右臂要从接近录制第一帧的姿态开始，否则整段会偏一个角度。急停放在手边。
+# 终端 B 先贴文件最上面的三个 export。
+# =============================================================================
+
+# 终端 A
+MODE=async INFER_DELAY=0.5 STEP_DURATION=0.033 OPEN_LOOP_HORIZON=30 \
+MAX_JOINT_STEP=0.20 MAX_GRIPPER_STEP=0.80 MAX_JOINT_VEL=6 MAX_GRIPPER_VEL=25 \
+ACTIONS_FILE=deploy/examples/aligned_joints.json \
+bash deploy/serve.sh
+
+# 终端 B
+MODE=async INFER_DELAY=0.5 STEP_DURATION=0.033 OPEN_LOOP_HORIZON=30 \
+MAX_JOINT_STEP=0.20 MAX_GRIPPER_STEP=0.80 MAX_JOINT_VEL=6 MAX_GRIPPER_VEL=25 \
+MAX_STEPS=622 NO_CAMERA=1 \
+bash deploy/client.sh
+
+
+
+

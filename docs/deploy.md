@@ -52,7 +52,7 @@ python deploy/examples/nudge_left_wrist.py --delta 0.03
 | 角色 | 模型侧。现在从文件或终端拿动作 | 机器人侧。读关节和相机，执行动作 |
 | 数据 | B 把观测 `POST /observation` 过来；B 再 `GET /actions` 取走动作块 | 收到的是归一化 \(\Delta\theta\)，加到当前关节角上再下发 |
 
-先开 A，再开 B。B 发现 A 没起来会直接退出。默认是位置串行。换成速度串行：`MODE=serial_speed bash deploy/client.sh`。模式说明见 [mode.md](mode.md)。
+先开 A，再开 B。B 发现 A 没起来会直接退出。默认是位置串行。换成速度串行：`MODE=serial_speed bash deploy/client.sh`。异步播放要两边都带 `MODE=async`，说明见 [mode.md](mode.md)。
 
 不连机器人、只在内存里走一遍：
 
@@ -68,11 +68,14 @@ bash deploy/serve.sh
 NO_MOVE=1 NO_CAMERA=1 bash deploy/client.sh
 ```
 
-确认打印出的角度增量是你要的，再真正运动。`NO_CAMERA=1` 用空白图像，只测关节：
+确认打印出的角度增量是你要的，再真正运动。只测关节、不打开相机时用 `NO_CAMERA=1`。要留下相机画面时不要加它，并让 A 带上 `SAVE_DIR`：
 
 ```bash
-NO_CAMERA=1 bash deploy/client.sh
+SAVE_DIR=deploy/records bash deploy/serve.sh
+bash deploy/client.sh
 ```
+
+每次观测存成 `SAVE_DIR/0001/` 这一类目录，里面是 `head.png`、`left_wrist.png`、`right_wrist.png` 和 `proprio.json`。
 
 执行过程中看 B 的状态：
 
@@ -206,16 +209,21 @@ MAX_STEPS=2 OPEN_LOOP_HORIZON=2 bash deploy/client.sh
 | `MAX_JOINT_STEP` | `0.10` | 手臂一步最大弧度，也是归一化 `0/1` 对应的幅度 |
 | `MAX_GRIPPER_STEP` | `0.30` | 夹爪一步最大行程 |
 | `LIMIT_MARGIN` | `0.02` | 手臂目标离硬限位保留的弧度 |
-| `MODE` | `serial` | `serial` 或 `serial_speed`。见 [mode.md](mode.md) |
+| `MODE` | `serial` | `serial`、`serial_speed` 或 `async`。见 [mode.md](mode.md) |
 | `JOINT_VELOCITY` | `0.20` | `serial` 模式下发给规划器的关节速度，rad/s |
 | `STEP_DURATION` | `0.50` | `serial_speed` 的步长时间，秒。速度 = Δθ / 这个时间 |
 | `MAX_JOINT_VEL` | `0.20` | `serial_speed` 手臂速度上限，rad/s |
-| `MAX_GRIPPER_VEL` | `0.40` | `serial_speed` 夹爪速度上限 |
+| `MAX_GRIPPER_VEL` | `0.40` | `serial_speed` 和 `async` 的夹爪速度上限 |
+| `INFER_DELAY` | `0`，`async` 为 `0.40` | 端口 A 在发出动作前等待的秒数，用来模拟推理 |
+| `PREFETCH_MARGIN` | `0.05` | `async` 在推理时间之外再提前这么多秒去要下一块 |
+| `SERVO_HZ` | `100` | `async` 的播放频率 |
+| `CONTROL_PERIOD` | `0.012` | 传给 `joint_servo_control` 的控制周期，秒 |
 | `MAX_STEPS` | `4` | B 最多执行多少步 |
 | `OPEN_LOOP_HORIZON` | `1` | 每向 A 要一次，连续执行几步 |
 | `MOCK` | `0` | `1` 时不连机器人，关节只存在内存里 |
 | `NO_MOVE` | `0` | `1` 时读真机关节并打印指令，不下发 |
 | `NO_CAMERA` | `0` | `1` 时不打开相机，用空白图 |
+| `SAVE_DIR` | 空 | 端口 A 把每次观测的三路图和关节角写到这个目录 |
 | `PYTHON` | `python` | 解释器。环境不在默认 `python` 上时写成绝对路径 |
 
 `MAX_JOINT_STEP` 和 `MAX_GRIPPER_STEP` 在 A、B 两侧要一致，否则同一句弧度增量会被编成不同的 `0–1`。用 `serve.sh` / `client.sh` 时两边读的是同一份配置。

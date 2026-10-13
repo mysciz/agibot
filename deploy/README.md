@@ -1,39 +1,23 @@
 # Agibot G2 部署
 
-动作是归一化的关节增量 \(\Delta\theta\)，每个数在 \([0, 1]\)，`0.5` 表示不动。左臂 7 关节、右臂 7 关节、左右夹爪。
+动作是关节增量 \(\Delta\theta\)。`"unit": "rad"` 写弧度，`"unit": "norm"` 写 0–1，`0.5` 表示不动。顺序是左臂 7、右臂 7、左右夹爪。模式见 [docs/mode.md](../docs/mode.md)，今晚的命令在 [scripts.txt](../scripts.txt)。
 
-## 先测能不能转关节
-
-急停放在手边。下面两个脚本只动一侧手腕末关节 `0.05` rad（约 3°），然后转回。
+连机器人的终端先执行。`serve` 不用。
 
 ```bash
 export LOCATOR_IP=10.42.1.102
 export AORTA_DISCOVERY_URI=http://10.42.1.101:2379
 export AORTA_DISPATCHER_THREAD_NUM=6
+```
 
+先开 A，再开 B。`MOCK=1` 不连机器人。`NO_MOVE=1` 只计算、不下发。
+
+```bash
 python deploy/examples/nudge_left_wrist.py
-python deploy/examples/nudge_right_wrist.py
-```
-
-幅度用 `--delta 0.03` 改，绝对值不超过 `0.15` rad。
-
-## 串行闭环
-
-端口 A（8800）给出动作，端口 B（8801）读机器人、POST 观测、GET 动作并执行。
-
-```bash
 bash deploy/serve.sh
-MOCK=1 bash deploy/client.sh
-MODE=serial_speed MOCK=1 bash deploy/client.sh
+MODE=serial_speed bash deploy/client.sh
+MODE=async bash deploy/serve.sh
+MODE=async bash deploy/client.sh
 ```
 
-默认 `MODE=serial` 用固定速度走到目标角。`serial_speed` 把这一步转角除以时间，变成各关节自己的速度。说明在 [docs/mode.md](../docs/mode.md)。
-
-连上机器人后先看指令、再真的动：
-
-```bash
-NO_MOVE=1 NO_CAMERA=1 bash deploy/client.sh
-NO_CAMERA=1 bash deploy/client.sh
-```
-
-动作文件是 `deploy/examples/joint0_wiggle.json`。改从终端输入：`ACTION_SOURCE=stdin bash deploy/serve.sh`，一行 16 个弧度增量，或 `hold` / `quit`。
+`SAVE_DIR=deploy/records` 加在 A 上，每次观测存成 `0001/head.png`、`left_wrist.png`、`right_wrist.png` 和 `proprio.json`。这时 B 不要加 `NO_CAMERA=1`。

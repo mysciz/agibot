@@ -22,6 +22,9 @@ class Robot(Protocol):
     def move_grippers(self, positions: np.ndarray) -> None:
         """阻塞直到双夹爪到达目标。positions 为 [左, 右] 物理行程。"""
 
+    def servo_joints(self, positions: np.ndarray, control_period: float) -> None:
+        """发一帧 16 维位置。调用马上返回，要按约 100Hz 连续调用。"""
+
     def close(self) -> None:
         ...
 
@@ -51,6 +54,7 @@ class MockRobot:
         self.arm_commands: list[np.ndarray] = []
         self.arm_velocities: list[np.ndarray] = []
         self.gripper_commands: list[np.ndarray] = []
+        self.servo_commands: list[np.ndarray] = []
 
     def read_radians(self) -> np.ndarray:
         return self.q.copy()
@@ -73,6 +77,15 @@ class MockRobot:
             raise ValueError("夹爪指令长度应为 2")
         self.gripper_commands.append(target.copy())
         self.q[ARM_DOF:] = target
+
+    def servo_joints(self, positions: np.ndarray, control_period: float) -> None:
+        target = np.asarray(positions, dtype=np.float64)
+        if target.shape != (ACTION_DIM,):
+            raise ValueError(f"伺服指令长度应为 {ACTION_DIM}")
+        if control_period <= 0:
+            raise ValueError("control_period 必须为正")
+        self.servo_commands.append(target.copy())
+        self.q[:] = target
 
     def close(self) -> None:
         return None
@@ -103,10 +116,10 @@ def _gripper_position(side: dict) -> float:
 
 
 class GdkRobot:
-    """通过 GDK 阻塞接口控制 G2 双臂和双夹爪。
+    """通过 GDK 控制 G2 双臂和双夹爪。
 
-    手臂使用 move_arm_joint(..., control_group=2)，该接口规划到目标后才返回。
-    不使用 joint_servo_control：伺服通道要 100Hz 连发，低延时模式没有碰撞保护。
+    串行模式用 move_arm_joint(..., control_group=2)，规划到目标后才返回。
+    异步模式用 joint_servo_control，按约 100Hz 送 16 维位置，不打开低延时通道。
     """
 
     def __init__(self, layout: JointLayout | None = None, init_sleep_s: float = 1.0):
@@ -164,6 +177,20 @@ class GdkRobot:
         joint_states.states = [left, right]
         joint_states.nums = 2
         self._robot.move_ee_pos(joint_states)
+
+    def servo_joints(self, positions: np.ndarray, control_period: float) -> None:
+        target = np.asarray(positions, dtype=np.float64)
+        if target.shape != (ACTION_DIM,):
+            raise ValueError(f"伺服指令长度应为 {ACTION_DIM}")
+        if control_period <= 0:
+            raise ValueError("control_period 必须为正")
+        request = self._gdk.JointServoControlReq()
+        request.control_period = float(control_period)
+        request.joint_names = list(self.layout.names)
+        request.joint_positions = [float(v) for v in target]
+        request.joint_velocities = []
+        # 不传 enable_low_latency。低延时通道没有碰撞保护。
+        self._robot.joint_servo_control(request)
 
     def close(self) -> None:
         from .gdk_session import release_gdk

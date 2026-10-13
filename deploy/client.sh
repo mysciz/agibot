@@ -4,6 +4,7 @@
 #   bash deploy/client.sh
 #   MOCK=1 bash deploy/client.sh
 #   MODE=serial_speed MOCK=1 bash deploy/client.sh
+#   MODE=async MOCK=1 bash deploy/client.sh
 #   NO_MOVE=1 bash deploy/client.sh
 #   MAX_STEPS=4 OPEN_LOOP_HORIZON=2 bash deploy/client.sh
 set -eo pipefail
@@ -30,9 +31,14 @@ ARGS=(
   --max-gripper-step "${MAX_GRIPPER_STEP}"
   --limit-margin "${LIMIT_MARGIN}"
   --joint-velocity "${JOINT_VELOCITY}"
-  --mode "${MODE_KEY}"
   --verbose
 )
+if [ "${MODE_KEY}" = "async" ]; then
+  ENTRY=deploy.g2.client_async
+else
+  ENTRY=deploy.g2.client_serial
+  ARGS+=(--mode "${MODE_KEY}")
+fi
 if [ -n "${STEP_DURATION:-}" ]; then
   ARGS+=(--step-duration "${STEP_DURATION}")
 fi
@@ -41,6 +47,20 @@ if [ -n "${MAX_JOINT_VEL:-}" ]; then
 fi
 if [ -n "${MAX_GRIPPER_VEL:-}" ]; then
   ARGS+=(--max-gripper-vel "${MAX_GRIPPER_VEL}")
+fi
+if [ "${MODE_KEY}" = "async" ]; then
+  if [ -n "${INFER_DELAY:-}" ]; then
+    ARGS+=(--infer-delay "${INFER_DELAY}")
+  fi
+  if [ -n "${PREFETCH_MARGIN:-}" ]; then
+    ARGS+=(--prefetch-margin "${PREFETCH_MARGIN}")
+  fi
+  if [ -n "${SERVO_HZ:-}" ]; then
+    ARGS+=(--servo-hz "${SERVO_HZ}")
+  fi
+  if [ -n "${CONTROL_PERIOD:-}" ]; then
+    ARGS+=(--control-period "${CONTROL_PERIOD}")
+  fi
 fi
 if [ "${MOCK}" = "1" ] || [ "${MOCK}" = "true" ]; then
   ARGS+=(--mock)
@@ -52,5 +72,5 @@ if [ "${NO_CAMERA}" = "1" ] || [ "${NO_CAMERA}" = "true" ]; then
   ARGS+=(--no-camera)
 fi
 
-echo "=== 端口 B  robot:${ROBOT_PORT}  model=${MODEL_URL}  mode=${MODE_KEY}  python=${PYTHON} ==="
-exec "${PYTHON}" -m deploy.g2.client_serial "${ARGS[@]}"
+echo "=== 端口 B  robot:${ROBOT_PORT}  model=${MODEL_URL}  mode=${MODE_KEY}  entry=${ENTRY}  python=${PYTHON} ==="
+exec "${PYTHON}" -m "${ENTRY}" "${ARGS[@]}"

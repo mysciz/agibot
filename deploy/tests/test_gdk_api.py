@@ -19,6 +19,7 @@ class _FakeRobot:
     def __init__(self):
         self.arm_calls = []
         self.ee_calls = []
+        self.servo_calls = []
         _FakeRobot.instances.append(self)
 
     def get_joint_states(self):
@@ -53,6 +54,9 @@ class _FakeRobot:
     def move_ee_pos(self, joint_states):
         self.ee_calls.append(joint_states)
 
+    def joint_servo_control(self, request, enable_low_latency=False):
+        self.servo_calls.append((request, enable_low_latency))
+
 
 class _FakeGDK:
     class GDKRes:
@@ -61,6 +65,13 @@ class _FakeGDK:
     class JointState:
         def __init__(self):
             self.position = None
+
+    class JointServoControlReq:
+        def __init__(self):
+            self.control_period = None
+            self.joint_names = None
+            self.joint_positions = None
+            self.joint_velocities = None
 
     class JointStates:
         def __init__(self):
@@ -136,6 +147,18 @@ class GdkApiTest(unittest.TestCase):
         self.assertAlmostEqual(command.states[0].position, -0.1)
         self.assertAlmostEqual(command.states[1].position, -0.4)
         self.assertFalse(robot.read_status()["right_arm_estop"])
+
+        target = np.linspace(-0.2, 0.2, 16)
+        robot.servo_joints(target, 0.012)
+        request, low_latency = fake_robot.servo_calls[0]
+        self.assertFalse(low_latency)
+        self.assertAlmostEqual(request.control_period, 0.012)
+        self.assertEqual(len(request.joint_names), 16)
+        self.assertEqual(request.joint_names[0], "idx21_arm_l_joint1")
+        self.assertEqual(request.joint_names[14], "idx31_gripper_l_inner_joint1")
+        self.assertEqual(len(request.joint_positions), 16)
+        self.assertEqual(request.joint_velocities, [])
+        self.assertAlmostEqual(request.joint_positions[0], target[0])
 
         robot.close()
         self.assertTrue(self.fake.released)

@@ -15,7 +15,8 @@ from deploy.g2.lib.actions import decode_normalized_delta, delta_scales, encode_
 from deploy.g2.lib.camera import prepare_image
 from deploy.g2.lib.execution import execute_delta, execute_speed
 from deploy.g2.lib.speed import SpeedConfig, angles_to_velocities
-from deploy.g2.lib.joints import make_layout
+from deploy.g2.lib.joints import make_layout, normalize
+from deploy.g2.lib.model_client import post_observation
 from deploy.g2.lib.robot import MockRobot
 from deploy.g2.lib.safety import SafetyConfig, SafetyStop
 from deploy.g2.loop import run_serial
@@ -145,6 +146,44 @@ class SerialProtocolTest(unittest.TestCase):
         self.assertAlmostEqual(records[2].delta_rad[0], -0.05, places=6)
         self.assertTrue(np.allclose(robot.read_radians(), start, atol=1e-6))
         self.assertEqual(prepare_image(np.zeros((2, 2, 3), np.uint8), 8, 8).shape, (8, 8, 3))
+
+
+class SaveObservationTest(unittest.TestCase):
+    def test_posted_cameras_are_written(self):
+        safety = SafetyConfig(max_joint_step_rad=0.10, max_gripper_step=0.30)
+        with tempfile.TemporaryDirectory() as folder:
+            state = build_state(
+                "file",
+                str(Path(__file__).resolve().parents[1] / "examples" / "joint0_wiggle.json"),
+                "omnipicker",
+                safety,
+                save_dir=folder,
+            )
+            httpd = serve(state, "127.0.0.1", 0)
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            try:
+                port = httpd.server_address[1]
+                cameras = _TinyCameras()
+                frames = {name: prepare_image(image, 8, 8) for name, image in cameras.read().items()}
+                proprio = np.zeros(16)
+                post_observation(
+                    f"http://127.0.0.1:{port}",
+                    frames,
+                    normalize(proprio, make_layout().limits),
+                    proprio,
+                    "test",
+                )
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+
+            saved = Path(folder) / "0001"
+            self.assertTrue((saved / "head.png").read_bytes().startswith(b"\x89PNG\r\n\x1a\n"))
+            self.assertTrue((saved / "left_wrist.png").is_file())
+            self.assertTrue((saved / "right_wrist.png").is_file())
+            stored = json.loads((saved / "proprio.json").read_text(encoding="utf-8"))
+            self.assertEqual(len(stored["proprio_rad"]), 16)
 
 
 def _one_joint(value: float) -> np.ndarray:

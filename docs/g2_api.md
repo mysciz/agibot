@@ -57,12 +57,27 @@ export AORTA_DISPATCHER_THREAD_NUM=6
 | 参数 | 代码里的取值 |
 |---|---|
 | `positions` | 14 个弧度。前 7 个左臂 `idx21`–`idx27`，后 7 个右臂 `idx61`–`idx67` |
-| `velocities` | 14 个速度，单位 rad/s，默认每个都是 `0.20` |
+| `velocities` | 14 个速度，单位 rad/s，取正值。`serial` 每个关节都用同一个速度，默认 `0.20`。`serial_speed` 用这一步转角除以步长时间 |
 | `control_group` | 固定为 `2`，表示同时控制双臂 |
 
 手腕示例也是这条接口：只改 14 维里的一个数（左腕下标 6，右腕下标 13），其余关节保持当前角度。
 
-没有使用 `joint_servo_control`。那条通道要按约 100Hz 连续发送，低延时模式没有碰撞保护。
+`async` 模式不走这条接口。
+
+### `Robot.joint_servo_control(joint_servo_control_req)`
+
+异步模式用它，按约 100Hz 送位置。一次调用马上返回，不会等到关节到位。
+
+| 字段 | 代码里的取值 |
+|---|---|
+| `control_period` | 默认 `0.012` 秒 |
+| `joint_names` | 16 个名字：14 个手臂关节，再加左右夹爪 |
+| `joint_positions` | 与名字等长的位置。手臂是弧度，夹爪是对应行程 |
+| `joint_velocities` | 空列表。这个字段目前预留，不使用 |
+
+不传 `enable_low_latency`。低延时通道没有碰撞保护。
+
+`move_arm_joint_servo` 是同一类 100Hz 接口，但只能发手臂，夹爪进不去，所以异步模式没有用它。
 
 ## 控制夹爪
 
