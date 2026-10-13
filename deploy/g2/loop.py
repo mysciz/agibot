@@ -27,6 +27,7 @@ def run_serial(
     verbose: bool = True,
     status_robot=None,
     on_step=None,
+    execute=execute_delta,
 ) -> list[StepRecord]:
     if max_steps < 1:
         raise ValueError("max_steps 至少为 1")
@@ -62,15 +63,18 @@ def run_serial(
             break
 
         for action in actions:
-            record = execute_delta(robot, action, layout, safety, status_robot=status_robot)
+            record = execute(robot, action, layout, safety, status_robot=status_robot)
             records.append(record)
             if on_step is not None:
                 on_step(record, len(records))
             if verbose:
+                speed_text = ""
+                if record.velocity is not None:
+                    speed_text = f"  v0={record.velocity[0]:+.4f} rad/s"
                 print(
                     f"[B] step {len(records)} "
                     f"d0={record.delta_rad[0]:+.4f} rad  "
-                    f"cmd0={record.command[0]:+.4f}  limited={record.limited}",
+                    f"cmd0={record.command[0]:+.4f}{speed_text}  limited={record.limited}",
                     flush=True,
                 )
             if len(records) >= max_steps:

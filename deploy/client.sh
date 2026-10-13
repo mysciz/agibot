@@ -3,6 +3,7 @@
 #
 #   bash deploy/client.sh
 #   MOCK=1 bash deploy/client.sh
+#   MODE=serial_speed MOCK=1 bash deploy/client.sh
 #   NO_MOVE=1 bash deploy/client.sh
 #   MAX_STEPS=4 OPEN_LOOP_HORIZON=2 bash deploy/client.sh
 set -eo pipefail
@@ -29,8 +30,18 @@ ARGS=(
   --max-gripper-step "${MAX_GRIPPER_STEP}"
   --limit-margin "${LIMIT_MARGIN}"
   --joint-velocity "${JOINT_VELOCITY}"
+  --mode "${MODE_KEY}"
   --verbose
 )
+if [ -n "${STEP_DURATION:-}" ]; then
+  ARGS+=(--step-duration "${STEP_DURATION}")
+fi
+if [ -n "${MAX_JOINT_VEL:-}" ]; then
+  ARGS+=(--max-joint-vel "${MAX_JOINT_VEL}")
+fi
+if [ -n "${MAX_GRIPPER_VEL:-}" ]; then
+  ARGS+=(--max-gripper-vel "${MAX_GRIPPER_VEL}")
+fi
 if [ "${MOCK}" = "1" ] || [ "${MOCK}" = "true" ]; then
   ARGS+=(--mock)
 fi

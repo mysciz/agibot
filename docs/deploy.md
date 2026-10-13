@@ -52,7 +52,7 @@ python deploy/examples/nudge_left_wrist.py --delta 0.03
 | 角色 | 模型侧。现在从文件或终端拿动作 | 机器人侧。读关节和相机，执行动作 |
 | 数据 | B 把观测 `POST /observation` 过来；B 再 `GET /actions` 取走动作块 | 收到的是归一化 \(\Delta\theta\)，加到当前关节角上再下发 |
 
-先开 A，再开 B。B 发现 A 没起来会直接退出。
+先开 A，再开 B。B 发现 A 没起来会直接退出。默认是位置串行。换成速度串行：`MODE=serial_speed bash deploy/client.sh`。模式说明见 [mode.md](mode.md)。
 
 不连机器人、只在内存里走一遍：
 
@@ -206,7 +206,11 @@ MAX_STEPS=2 OPEN_LOOP_HORIZON=2 bash deploy/client.sh
 | `MAX_JOINT_STEP` | `0.10` | 手臂一步最大弧度，也是归一化 `0/1` 对应的幅度 |
 | `MAX_GRIPPER_STEP` | `0.30` | 夹爪一步最大行程 |
 | `LIMIT_MARGIN` | `0.02` | 手臂目标离硬限位保留的弧度 |
-| `JOINT_VELOCITY` | `0.20` | 发给规划器的关节速度，rad/s |
+| `MODE` | `serial` | `serial` 或 `serial_speed`。见 [mode.md](mode.md) |
+| `JOINT_VELOCITY` | `0.20` | `serial` 模式下发给规划器的关节速度，rad/s |
+| `STEP_DURATION` | `0.50` | `serial_speed` 的步长时间，秒。速度 = Δθ / 这个时间 |
+| `MAX_JOINT_VEL` | `0.20` | `serial_speed` 手臂速度上限，rad/s |
+| `MAX_GRIPPER_VEL` | `0.40` | `serial_speed` 夹爪速度上限 |
 | `MAX_STEPS` | `4` | B 最多执行多少步 |
 | `OPEN_LOOP_HORIZON` | `1` | 每向 A 要一次，连续执行几步 |
 | `MOCK` | `0` | `1` 时不连机器人，关节只存在内存里 |

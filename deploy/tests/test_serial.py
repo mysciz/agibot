@@ -13,7 +13,8 @@ import numpy as np
 from deploy.g2.lib.action_source import FileSource, load_steps, parse_command
 from deploy.g2.lib.actions import decode_normalized_delta, delta_scales, encode_delta_rad
 from deploy.g2.lib.camera import prepare_image
-from deploy.g2.lib.execution import execute_delta
+from deploy.g2.lib.execution import execute_delta, execute_speed
+from deploy.g2.lib.speed import SpeedConfig, angles_to_velocities
 from deploy.g2.lib.joints import make_layout
 from deploy.g2.lib.robot import MockRobot
 from deploy.g2.lib.safety import SafetyConfig, SafetyStop
@@ -81,6 +82,28 @@ class ExecuteTest(unittest.TestCase):
         action[0] = encode_delta_rad(_one_joint(0.05), delta_scales(safety))[0]
         execute_delta(robot, action, layout, safety)
         self.assertAlmostEqual(robot.read_radians()[0], start + 0.05, places=6)
+
+
+class SpeedModeTest(unittest.TestCase):
+    def test_large_angle_becomes_capped_velocity(self):
+        delta = _one_joint(0.10)
+        config = SpeedConfig(step_duration=0.5, max_joint_vel=0.10, max_gripper_vel=0.40)
+        velocity, step = angles_to_velocities(delta, config)
+        self.assertAlmostEqual(velocity[0], 0.10)
+        self.assertAlmostEqual(step[0], 0.05)
+
+    def test_execute_speed_sends_per_joint_velocity(self):
+        layout = make_layout()
+        robot = MockRobot(layout)
+        start = robot.read_radians()[0]
+        safety = SafetyConfig(max_joint_step_rad=0.20, max_gripper_step=0.30)
+        speed = SpeedConfig(step_duration=0.5, max_joint_vel=0.20, max_gripper_vel=0.40)
+        action = np.full(16, 0.5)
+        action[0] = encode_delta_rad(_one_joint(0.05), delta_scales(safety))[0]
+        record = execute_speed(robot, action, layout, safety, speed)
+        self.assertAlmostEqual(record.velocity[0], 0.10, places=5)
+        self.assertAlmostEqual(robot.read_radians()[0], start + 0.05, places=5)
+        self.assertAlmostEqual(robot.arm_velocities[0][0], 0.10, places=5)
 
 
 class SerialProtocolTest(unittest.TestCase):

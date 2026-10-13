@@ -1,0 +1,72 @@
+# 在 agibot/ 目录执行（这一层能看到 deploy/）。
+# 一次只复制一块。serve 会占住终端，不要把整份文件贴进同一个终端。
+# 换 JSON 时：先 Ctrl+C 停掉旧的 serve，再开新的 serve，然后再开 client。
+# 只开 serve 不会动。client 起来之后才会要动作。
+
+cd /home/zhouzhenliang/agibot/agibot
+
+# 连机器人的终端先执行。serve 不连机器人，可以不设。
+# 若提示 python 未找到，先 conda activate base。
+export LOCATOR_IP=10.42.1.102
+export AORTA_DISCOVERY_URI=http://10.42.1.101:2379
+export AORTA_DISPATCHER_THREAD_NUM=6
+
+
+# =============================================================================
+# 1. 直接控制手腕（不经过 serve / client）
+# 各转 0.05 rad（约 3°），停 2 秒，再转回。急停放在手边。
+# =============================================================================
+
+python deploy/examples/nudge_left_wrist.py
+
+python deploy/examples/nudge_right_wrist.py
+
+
+# =============================================================================
+# 2. 三个 JSON
+# 每个文件：终端 A 先开 serve，看到「模型端口」后再开终端 B。
+# B 跑完自己退出。A 要手动 Ctrl+C。
+# 下面的 client 带 NO_CAMERA=1，不打开相机。确认要动再贴。
+# 只打印、不下发：把 client 那一行改成 NO_MOVE=1 NO_CAMERA=1 bash deploy/client.sh
+# =============================================================================
+
+# --- 2.1 joint0_wiggle.json：4 步，只动左臂第 1 关节 ±0.05 rad ---
+# 终端 A
+bash deploy/serve.sh
+
+# 终端 B
+NO_CAMERA=1 bash deploy/client.sh
+
+
+# --- 2.2 small_multi_joint.json：8 步，多关节，每步最大约 1°，会回到起点 ---
+# 终端 A
+ACTIONS_FILE=deploy/examples/small_multi_joint.json bash deploy/serve.sh
+
+# 终端 B
+MAX_STEPS=8 NO_CAMERA=1 bash deploy/client.sh
+
+
+# --- 2.3 visible_multi_joint.json：6 步，手臂约 9°，最后夹爪张开再合上 ---
+# 终端 A
+ACTIONS_FILE=deploy/examples/visible_multi_joint.json bash deploy/serve.sh
+
+# 终端 B
+MAX_STEPS=6 NO_CAMERA=1 bash deploy/client.sh
+
+
+# =============================================================================
+# 3. 终端输入（stdin）
+# 终端 A 先开。终端 B 再开。提示符 Δθ> 出现在 A，而且是 B 来要动作时才出现。
+# 一行 16 个弧度增量：左臂 7、右臂 7、左夹爪、右夹爪。0 表示不动。
+# 直接回车或 hold = 不动。quit = 结束。
+# 默认 MAX_STEPS=4，所以 B 会来要 4 行。要多打几行就把 B 的 MAX_STEPS 改大。
+# =============================================================================
+
+# 终端 A
+ACTION_SOURCE=stdin bash deploy/serve.sh
+
+# 终端 B
+NO_CAMERA=1 bash deploy/client.sh
+
+# 回到终端 A，在 Δθ> 后面贴一行。例如左臂第 1 关节 +0.05 rad：
+# 0.05 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0

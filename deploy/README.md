@@ -24,7 +24,10 @@ python deploy/examples/nudge_right_wrist.py
 ```bash
 bash deploy/serve.sh
 MOCK=1 bash deploy/client.sh
+MODE=serial_speed MOCK=1 bash deploy/client.sh
 ```
+
+默认 `MODE=serial` 用固定速度走到目标角。`serial_speed` 把这一步转角除以时间，变成各关节自己的速度。说明在 [docs/mode.md](../docs/mode.md)。
 
 连上机器人后先看指令、再真的动：
 

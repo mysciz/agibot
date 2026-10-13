@@ -16,8 +16,12 @@ import numpy as np
 from deploy.g2.lib.camera import GdkCameras, MockCameras
 from deploy.g2.lib.joints import make_layout
 from deploy.g2.lib.robot import GdkRobot, MockRobot
+from deploy.g2.lib.execution import execute_delta, execute_speed
 from deploy.g2.lib.safety import SafetyConfig, SafetyStop
+from deploy.g2.lib.speed import SpeedConfig
 from deploy.g2.loop import run_serial
+
+IMPLEMENTED_MODES = ("serial", "serial_speed")
 
 
 class RobotStatus:
@@ -81,11 +85,18 @@ def main() -> None:
     parser.add_argument("--max-gripper-step", type=float, default=0.30)
     parser.add_argument("--limit-margin", type=float, default=0.02)
     parser.add_argument("--joint-velocity", type=float, default=0.20)
+    parser.add_argument("--mode", default="serial")
+    parser.add_argument("--step-duration", type=float, default=0.5)
+    parser.add_argument("--max-joint-vel", type=float, default=0.20)
+    parser.add_argument("--max-gripper-vel", type=float, default=0.40)
     parser.add_argument("--image-height", type=int, default=224)
     parser.add_argument("--image-width", type=int, default=224)
     parser.add_argument("--timeout", type=float, default=120.0)
     parser.add_argument("--verbose", action="store_true", default=True)
     args = parser.parse_args()
+    if args.mode not in IMPLEMENTED_MODES:
+        known = ", ".join(IMPLEMENTED_MODES)
+        raise SystemExit(f"模式 {args.mode} 还没有实现。当前可用: {known}")
 
     layout = make_layout(args.gripper)
     safety = SafetyConfig(
@@ -94,6 +105,20 @@ def main() -> None:
         limit_margin_rad=args.limit_margin,
         joint_velocity=args.joint_velocity,
     )
+    if args.mode == "serial_speed":
+        speed = SpeedConfig(
+            step_duration=args.step_duration,
+            max_joint_vel=args.max_joint_vel,
+            max_gripper_vel=args.max_gripper_vel,
+        )
+
+        def execute(robot, action, layout, safety, status_robot=None):
+            return execute_speed(
+                robot, action, layout, safety, speed, status_robot=status_robot
+            )
+    else:
+        speed = None
+        execute = execute_delta
     status = RobotStatus()
     httpd = _serve_status(status, args.host, args.port)
     hardware = None
@@ -117,9 +142,16 @@ def main() -> None:
             cameras = GdkCameras()
 
         mode = "mock" if args.mock else ("no-move" if args.no_move else "gdk")
+        speed_text = ""
+        if speed is not None:
+            speed_text = (
+                f"  duration={speed.step_duration:.2f}s"
+                f"  max_vel={speed.max_joint_vel:.3f} rad/s"
+            )
         print(
-            f"[B] {mode}  model={args.model_url}  "
-            f"horizon={args.open_loop_horizon}  max_step={safety.max_joint_step_rad:.3f} rad",
+            f"[B] {mode}  control={args.mode}  model={args.model_url}  "
+            f"horizon={args.open_loop_horizon}  max_step={safety.max_joint_step_rad:.3f} rad"
+            f"{speed_text}",
             flush=True,
         )
         status.update(status="running", mode=mode, model_url=args.model_url)
@@ -146,6 +178,7 @@ def main() -> None:
             verbose=args.verbose,
             status_robot=status_robot,
             on_step=_on_step,
+            execute=execute,
         )
         status.update(status="done", steps=len(records))
         print(f"[B] 完成 {len(records)} 步", flush=True)

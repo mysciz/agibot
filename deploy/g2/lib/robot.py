@@ -49,6 +49,7 @@ class MockRobot:
             raise ValueError(f"初始姿态长度应为 {ACTION_DIM}")
         self.status = _clean_status()
         self.arm_commands: list[np.ndarray] = []
+        self.arm_velocities: list[np.ndarray] = []
         self.gripper_commands: list[np.ndarray] = []
 
     def read_radians(self) -> np.ndarray:
@@ -57,13 +58,13 @@ class MockRobot:
     def read_status(self) -> dict:
         return dict(self.status)
 
-    def move_arms(self, positions: np.ndarray, velocity: float) -> None:
+    def move_arms(self, positions: np.ndarray, velocity) -> None:
         target = np.asarray(positions, dtype=np.float64)
+        speed = _arm_velocities(velocity)
         if target.shape != (ARM_DOF,):
             raise ValueError(f"手臂指令长度应为 {ARM_DOF}")
-        if velocity <= 0:
-            raise ValueError("速度必须为正")
         self.arm_commands.append(target.copy())
+        self.arm_velocities.append(speed)
         self.q[:ARM_DOF] = target
 
     def move_grippers(self, positions: np.ndarray) -> None:
@@ -75,6 +76,17 @@ class MockRobot:
 
     def close(self) -> None:
         return None
+
+
+def _arm_velocities(velocity) -> np.ndarray:
+    speed = np.asarray(velocity, dtype=np.float64)
+    if speed.ndim == 0:
+        speed = np.full(ARM_DOF, float(speed))
+    if speed.shape != (ARM_DOF,):
+        raise ValueError(f"手臂速度长度应为 {ARM_DOF}")
+    if np.any(speed <= 0) or not np.all(np.isfinite(speed)):
+        raise ValueError("手臂速度必须是正数")
+    return speed
 
 
 def _joint_position(state: dict) -> float:
@@ -131,12 +143,13 @@ class GdkRobot:
             "right_arm_estop": bool(status.get("right_arm_estop", False)),
         }
 
-    def move_arms(self, positions: np.ndarray, velocity: float) -> None:
+    def move_arms(self, positions: np.ndarray, velocity) -> None:
         target = [float(v) for v in np.asarray(positions, dtype=np.float64)]
         if len(target) != ARM_DOF:
             raise ValueError(f"手臂指令长度应为 {ARM_DOF}")
-        velocities = [float(velocity)] * ARM_DOF
+        velocities = [float(v) for v in _arm_velocities(velocity)]
         # control_group=2：同时规划左右臂，调用返回时运动已结束。
+        # velocities 是各关节走向目标的速度，单位 rad/s，取正值。
         self._robot.move_arm_joint(target, velocities, 2)
 
     def move_grippers(self, positions: np.ndarray) -> None:
