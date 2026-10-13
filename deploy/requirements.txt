@@ -1,0 +1,3 @@
+numpy>=1.19
+# 真机 JPEG 相机解码需要。模拟测试不依赖它。
+opencv-python>=4.5
